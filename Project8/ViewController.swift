@@ -18,7 +18,11 @@ class ViewController: UIViewController {
     var activatedButtons = [UIButton]()
     var solutions = [String]()
     
-    var score = 0
+    var score = 0 {
+        didSet {
+            scoreLabel.text = "Score : \(score)"
+        }
+    }
     var level = 1
     
     override func loadView() {
@@ -71,6 +75,9 @@ class ViewController: UIViewController {
         
         let buttonsView = UIView()
         buttonsView.translatesAutoresizingMaskIntoConstraints = false
+        //challenge
+        buttonsView.layer.borderWidth = 5
+        buttonsView.layer.borderColor = UIColor.lightGray.cgColor
         view.addSubview(buttonsView)
         
         
@@ -133,15 +140,63 @@ class ViewController: UIViewController {
     }
     
     @objc func letterTapped (_ sender: UIButton){
+        guard let buttonTitle = sender.titleLabel?.text else { return }
+        currentAnswer.text = currentAnswer.text?.appending(buttonTitle)
+        activatedButtons.append(sender)
+        sender.isHidden = true
         
     }
 
     @objc func submitTapped (_ sender: UIButton){
+        guard let answerText = currentAnswer.text else { return }
         
+        if let solutionPosition = solutions.firstIndex(of: answerText) {
+            activatedButtons.removeAll()
+            
+            var splitAnswers = answersLabel.text?.components(separatedBy: "\n")
+            
+            splitAnswers?[solutionPosition] = answerText
+            answersLabel.text = splitAnswers?.joined(separator: "\n")
+            
+            currentAnswer.text = ""
+            score += 1
+            
+            scoreLabel.text = "Score : \(score)"
+            
+            if score % 7 == 0 {
+                let ac = UIAlertController(title: "Well Done !", message: "Are you ready for the next level", preferredStyle: .alert)
+                
+                ac.addAction(UIAlertAction(title: "Let's go", style: .default, handler: levelUp))
+            }
+        }
+        
+        // Challenge !
+        clearTapped(sender)
+        
+        score -= 1
+        
+        let ac = UIAlertController(title: "Wrong Answer !", message: "Your answer is incorrect ! GO STP fix this !!", preferredStyle: .alert)
+        
+        ac.addAction(UIAlertAction(title: "Okay", style: .default))
+        present(ac, animated: true)
+    }
+    
+    func levelUp(action: UIAlertAction) {
+        level += 1
+        
+        solutions.removeAll(keepingCapacity: true)
+        loadLevel()
+        for button in letterButtons {
+            button.isHidden = false
+        }
     }
     
     @objc func clearTapped (_ sender: UIButton){
-        
+        currentAnswer.text = ""
+        for buttons in activatedButtons {
+            buttons.isHidden = false
+        }
+        activatedButtons.removeAll()
     }
     
     func loadLevel () {
@@ -166,7 +221,7 @@ class ViewController: UIViewController {
                     
                     let bits = answer.components(separatedBy: "|")
                     letterBits += bits
-                    //10:59
+                    
                 }
                 
                 cluesLabel.text = clueString.trimmingCharacters(in: .whitespacesAndNewlines)
